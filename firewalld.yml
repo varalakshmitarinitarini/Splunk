@@ -1,0 +1,12 @@
+---
+- name: Calling | Indexer Role |  Installing Indexer 
+  hosts: centos
+  tags: Indexer
+  tasks:
+    - name: Open port | firewall | opening port in firewall on target node
+      become: true
+      firewalld:
+        port: "8089/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes

@@ -1,0 +1,106 @@
+---
+
+- name: Add splunk group
+  group:
+    name: "splunk"
+    state: present  
+  become: yes  
+
+- name: Add splunk user
+  user:
+    name: "splunk"
+    group: "splunk"
+    home: /home/splunk
+    shell: /bin/bash
+    comment: Splunk User
+  become: yes
+
+- name: Create splunk/forwarder dir
+  file:
+    path: "/opt/splunkforwarder"
+    state: directory
+    mode: 0755  
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+
+- name: -TGZ- Check for the presence of /home/splunk/splunk_uf_tgz 
+  stat: 
+    path: /home/splunk/splunkforwarder-9.0.4-de405f4a7979-Linux-x86_64.tgz
+    get_checksum: yes  
+    checksum_algorithm: md5
+  register: splunk_uf_tgz_downloaded_flag
+  become: yes
+
+- name: -TGZ- Download (wget)  splunk_uf_tgz 
+  get_url:
+    url: "https://download.splunk.com/products/universalforwarder/releases/9.0.4/linux/splunkforwarder-9.0.4-de405f4a7979-Linux-x86_64.tgz"    
+    checksum: "md5:9a1470f627bfaaeab623b53d16d3505d"
+    dest: /home/splunk
+    mode: 0640  
+    owner: "splunk"
+    group: "splunk"
+    timeout: 20
+  become: yes
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+- name: -TGZ- Extract  splunk_uf_tgz  to splunk_uf_home to install
+  unarchive:
+    src: /home/splunk/splunkforwarder-9.0.4-de405f4a7979-Linux-x86_64.tgz
+    dest: "/opt"
+    remote_src: yes
+    owner: "splunk"
+    group: "splunk"    
+  become: yes
+
+- name: Create user-seed.conf file for default admin creds
+  template:
+    src: user-seed.conf.j2
+    dest: "/opt/splunkforwarder/etc/system/local/user-seed.conf"
+  become: yes
+
+- name: Create user-seed.conf file for default admin creds
+  template:
+    src: outputs.conf.j2
+    dest: "/opt/splunkforwarder/etc/system/local/outputs.conf"
+  become: yes
+
+- name: Set  splunk_uf_home owner & group recursively
+  file:
+    path: "/opt/splunkforwarder"
+    state: directory
+    owner: "splunk"
+    group: "splunk"
+    recurse: yes
+  become: yes 
+
+- name: enable
+  become: true
+  expect:
+    command: "/opt/splunkforwarder/bin/splunk enable boot-start -user splunk --answer-yes --accept-license"
+    responses:
+      'Please enter an administrator username:': 'splunk'
+      'Please enter a new password:': 'splunk@123'
+      'Please confirm new password:': 'splunk@123'
+    timeout: 600
+ 
+
+
+- name: -initd- Splunk enable boot-start
+  command: "/opt/splunkforwarder/bin/splunk enable boot-start -user splunk --no-prompt --answer-yes --accept-license"
+  become: yes
+
+  #- name: -initd- Start Splunk UF for the first time
+  #command: "/opt/splunkforwarder/bin/splunk start --no-prompt --answer-yes --accept-license"
+  #become: yes 
+
+- name: "Create symlink to splunk in /usr/local/bin"
+  file:
+    src: "/opt/splunkforwarder/bin/splunk"
+    path: /usr/local/bin/splunk
+    state: link
+    owner: "splunk"
+    group: "splunk"
+  become: yes  

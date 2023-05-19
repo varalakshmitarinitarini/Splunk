@@ -1,0 +1,7 @@
+---
+- name: Calling | Indexer Role |  Installing Indexer 
+  hosts: Indexer
+  tags: Indexer
+  tasks:
+  - include_role:
+      name: Indexer

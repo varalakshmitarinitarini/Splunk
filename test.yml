@@ -1,0 +1,14 @@
+---
+- name: Calling | Indexer Role |  Installing Indexer 
+  hosts: localhost
+  tags: Indexer
+  tasks:
+    - name: check | the status of the CSV file url | checking the status of csv file url from localhost
+      uri:
+        url: http://10.54.104.88:8000
+        method: GET
+        timeout: 30
+        return_content: yes
+      register: out
+      ignore_errors: true
+

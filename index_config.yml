@@ -1,0 +1,34 @@
+- name: Create Free License in Splunk
+  hosts: localhost
+  gather_facts: false
+  vars:
+    splunk_server: "http://10.54.104.88:8000"
+    splunk_username: "splunk"
+    splunk_password: "splunk@123"
+  tasks:
+    - name: Generate free license
+      uri:
+        url: "http://http://10.54.104.88:8000"
+        method: POST
+        headers:
+          Content-Type: "application/x-www-form-urlencoded"
+        body_format: form-urlencoded
+        body:
+          name: "Free License"
+          description: "Free License"
+          quota: "500"  # Specify the desired data ingestion quota in MB per day
+          autoapply: "true"
+          sharing: "global"
+        validate_certs: false
+        user: "{{ splunk_username }}"
+        password: "{{ splunk_password }}"
+      register: response
+      #environment:
+      # http_proxy: http://10.154.248.91:8080
+      # https_proxy: http://10.154.248.91:8080
+
+    - name: Check license creation status
+      debug:
+        msg: "License created successfully."
+      when: response.status == 200
+

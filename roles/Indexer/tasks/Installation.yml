@@ -1,0 +1,119 @@
+#- name: Update | cache | Updating the repos
+# package: 
+#   update_cache: yes
+# environment:
+#   http_proxy: http://10.154.248.91:8080
+#   https_proxy: http://10.154.248.91:8080
+
+- name: install | pre-requisites | installing pre requisites
+  become: true
+  package:
+    name: git,wget,python3,python3-pip,rpm,alien
+    state: present
+    update_cache: yes
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+- name: check | python_modules
+  shell: pip3 list
+  register: _check_pip_modules
+- name: install | python_modules | installing python modules
+  pip:
+    name:
+      - amqplib==1.0.2 
+      - future==0.16.0 
+      - requests==2.10.0 
+      - setuptools==39.0.1 
+      - six==1.11.0 
+  become: true
+  ignore_errors: true
+
+- name: Add | group | Adding group for Splunk
+  group:
+    name: splunk
+    state: present
+  become: true
+
+- name: Add | User | Adding user for splunk
+  user:
+    name: splunk
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    home: /opt/splunk
+    create_home: yes
+  become: true
+
+  #- name: create | directory | Creating directory in target vm
+  #become: true
+  #file:
+  #  path: "{{ l_rmp_location_path }}"
+  # state: directory
+  #  owner: splunk
+  # group: splunk
+
+- name: copy | rpm | copying rpm file
+  copy:
+    src: /etc/ansible/playbooks/Splunk_repo/roles/Indexer/files/splunk-9.0.4.1-419ad9369127-linux-2.6-x86_64.rpm
+    dest: "{{ l_rmp_location_path }}"
+  become: true
+
+- name: download | splunk indexer | Downloading Splunkindexer in target VM
+  get_url:
+    url: https://download.splunk.com/products/splunk/releases/8.0.0/linux/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb
+    dest: "{{ l_rmp_location_path }}/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb"
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+  become: true
+
+- name: change | ownership | changing file permissions
+  become: true
+  file:
+    path: "{{ l_rmp_location_path }}"
+    owner: splunk
+    group: splunk
+    recurse: yes
+- name: Install Splunk DEB package
+  command: dpkg --install /opt/Splunk/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb
+  become: true
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+- name: add splunk repo
+  apt_repository:
+    repo: 'deb https://repo.splunk.com/$(lab_release -i -s)/apt stable main'
+    state: present
+    filename: splunk
+ 
+- name: import splunk gpg key
+  apt_key:
+    url: https://repo.splunk.com/apt/$(lsb_release -i -s)Release.key
+    state: present
+  become: true
+
+- name: Install splunk
+  apt:
+    name: splunk
+    state: present
+  become: true
+  
+- name: install | splunk | splunk package installation
+  command: "rpm -i splunk-9.0.4.1-419ad9369127-linux-2.6-x86_64.rpm"
+  args:
+    chdir: "{{ l_rmp_location_path }}"
+  become_user: splunk
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+- name: install | splunk | splunk package installation
+  become: true
+  package:
+    name: splunk-9.0.4.1-419ad9369127-linux-2.6-x86_64.rpm
+    state: present
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+

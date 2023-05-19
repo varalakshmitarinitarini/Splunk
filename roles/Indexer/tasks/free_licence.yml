@@ -1,0 +1,17 @@
+---
+- name: Activate free license
+  uri:
+    url: "http://10.54.104.55:8000/services/licenser/groups/Free?output_mode=json"
+    url: "http://10.54.104.55:8000/en-US/manager/system/licensing/switch?return_to=%2Fen-US%2Fmanager%2Fsystem%2Flicensing"
+    method: POST
+    user: "splunk"
+    password: "splunk@123"
+    force_basic_auth: yes
+    validate_certs: false
+    body:
+      is_active: 1
+    body_format: "form-urlencoded"
+    status_code: 200
+    timeout: 10
+    use_proxy: no
+    # when: not check_free_lic.json.entry[0].content.is_active

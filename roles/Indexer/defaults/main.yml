@@ -1,0 +1,11 @@
+---
+# defaults file for roles/Indexer
+l_pip_modules:
+ - amqplib==1.0.2
+ - future==0.16.0
+ - requests==2.10.0
+ - setuptools==39.0.1
+ - six==1.11.0
+
+l_rmp_location_path: "/opt/splunk/"
+

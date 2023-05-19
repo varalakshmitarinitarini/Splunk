@@ -1,0 +1,124 @@
+---
+
+- name: Add | splunk group | Adding splunk group
+  group:
+    name: splunk
+    state: present  
+  become: yes  
+
+- name: Add | splunk user | Adding splunk user with the home dir /home/splunk
+  user:
+    name: splunk
+    group: splunk
+    home: /home/splunk/
+    shell: /bin/bash
+    comment: Splunk User
+  become: yes
+
+- name: Create | splunk_home dir | Creating Splunk Home Directory
+  file:
+    path: /opt/splunk
+    state: directory
+    mode: '0755'
+    owner: splunk
+    group: splunk
+  become: yes
+
+- name: Check | tar file | Checking if tar file existis or not
+  stat: 
+    path: /home/splunk/splunk-8.2.7.1-c2b65bc24aea-Linux-x86_64.tgz
+    get_checksum: yes  
+    checksum_algorithm: md5
+  register: splunk_tgz_downloaded_flag
+  become: yes
+
+- name: Download | tgz | Downloading tgz from (wget)  
+  get_url:
+    url: "https://download.splunk.com/products/splunk/releases/8.2.7.1/linux/splunk-8.2.7.1-c2b65bc24aea-Linux-x86_64.tgz"
+    checksum: "md5:f1ca62ea0141803d4b2b8acd1f8b4a51"
+    dest: /home/splunk
+    mode: '0640'  
+    owner: "splunk"
+    group: "splunk"
+    timeout: 20
+  become: yes
+  when: splunk_tgz_downloaded_flag.stat.exists == False 
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+- name: Extract | splunk_tgz | Extract tar to splunk_home to install
+  unarchive:
+    src: /home/splunk/splunk-8.2.7.1-c2b65bc24aea-Linux-x86_64.tgz
+    dest: "/opt"
+    remote_src: yes
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+
+- name: Create | symlink | creating symlink From /opt/splunk/bin/splunk to splunk in /usr/local/bin
+  file:
+    src: "/opt/splunk/bin/splunk"
+    path: /usr/local/bin/splunk
+    state: link
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+
+- name: Create | file | Creating file for default admin creds
+  template:
+    src: user-seed.conf.j2
+    dest: "/opt/splunk/etc/system/local/user-seed.conf"
+  become: yes
+
+- name: Create | Touch /opt/splunk/etc/.ui_login
+  file:
+    path: "/opt/splunk/etc/.ui_login"
+    state: touch
+    mode: '0644'
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+
+- name: -web.conf- Create file to disable SSL and set up file for additional adds
+  template:
+    src: inputs.conf.j2
+    dest: "/opt/splunk/etc/system/local/inputs.conf"
+  become: yes
+
+- name: Set splunk_home  owner & group recursively
+  file:
+    path: "/opt/splunk"
+    state: directory
+    owner: "splunk"
+    group: "splunk"
+    recurse: yes
+  become: yes
+
+- name: Ensure default Splunk systemd unit file does not already exist
+  file:
+    path: /etc/systemd/system/Splunkd.service
+    state: absent
+  become: yes
+
+- name: -initd & Splunk enable boot-start
+  command: "/opt/splunk/bin/splunk enable boot-start -systemd-managed 0 -user splunk --no-prompt --answer-yes --accept-license"
+  become: yes
+
+- name: -systemd & Ubuntu- After Splunkd.service update reload the systemd daemon units
+  command: systemctl daemon-reload
+  become: yes
+
+- name: -systemd- Start Splunk for the first time
+  command: "systemctl start splunk"
+  become: yes
+
+- name: Open port | firewall | opening port in firewall on target node
+  become: true
+  firewalld:
+    port: "8089/tcp"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: ( ansible_distribution == "CentOS" or ansible_distribution == "Rocky" )
+

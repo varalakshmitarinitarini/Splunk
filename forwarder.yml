@@ -1,0 +1,7 @@
+---
+- name: Calling | Forwarder Role |  Installing Forwarder
+  hosts: Forwarder
+  tags: Forwarder
+  tasks:
+  - include_role:
+      name: Forwarder

@@ -1,0 +1,86 @@
+---
+
+- name: Add splunk group
+  group:
+    name: "splunk"
+    state: present
+  become: yes
+
+- name: Add splunk user
+  user:
+    name: "splunk"
+    group: "splunk"
+    home: /home/splunk
+    shell: /bin/bash
+    comment: Splunk User
+  become: yes
+
+- name: Create splunk/forwarder dir
+  file:
+    path: "/opt/splunkforwarder"
+    state: directory
+    mode: 0755
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+- name: -TGZ- Download (wget)  splunk_uf_tgz
+  get_url:
+    url: "https://download.splunk.com/products/universalforwarder/releases/8.2.9/linux/splunkforwarder-8.2.9-4a20fb65aa78-Linux-x86_64.tgz"
+    #  checksum: "d21495c8e15c0126a030bb3c9adf94a9"
+    dest: /home/splunk
+    mode: 0640
+    owner: "splunk"
+    group: "splunk"
+    timeout: 20
+  become: yes
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+
+  #- name: Create outputs.conf file for default admin creds
+  #template:
+  # src: outputs.conf.j2
+  # dest: "/opt/splunkforwarder/etc/system/local/outputs.conf"
+  #become: yes
+
+- name: -TGZ- Extract  splunk_uf_tgz  to splunk_uf_home to install
+  unarchive:
+    src: /home/splunk/splunkforwarder-8.2.9-4a20fb65aa78-Linux-x86_64.tgz
+    dest: "/opt"
+    remote_src: yes
+    owner: "splunk"
+    group: "splunk"
+  become: yes
+- name: Set  splunk_uf_home owner & group recursively
+  file:
+    path: "/opt/splunkforwarder"
+    state: directory
+    owner: "splunk"
+    group: "splunk"
+    recurse: yes
+  become: yes
+
+- name: Create user-seed.conf file for default admin creds
+  template:
+    src: user-seed.conf.j2
+    dest: "/opt/splunkforwarder/etc/system/local/user-seed.conf"
+  become: yes
+- name: Create outputs.conf file for default admin creds
+  template:
+   src: outputs.conf.j2
+   dest: "/opt/splunkforwarder/etc/system/local/outputs.conf"
+  become: yes
+
+- name: enable
+  become: true
+  expect:
+          #command: "/opt/splunkforwarder/bin/splunk enable boot-start -user splunk --answer-yes --accept-license"
+    command: "/opt/splunkforwarder/bin/splunk start --answer-yes --accept-license"
+    responses:
+      'Please enter an administrator username:': 'splunk'
+      'Please enter a new password:': 'splunk@123'
+      'Please confirm new password:': 'splunk@123'
+    timeout: 600
+
+

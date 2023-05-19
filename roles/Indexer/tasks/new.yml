@@ -1,0 +1,83 @@
+- name: enable
+  become: true
+  expect:
+    command: "sudo /opt/splunk/bin/splunk enable boot-start"
+    responses:
+      'Do you agree with this license? \[y/n\]:': 'y'
+      'Do you agree with this license? \[y/n\]:': 'y'
+      #'Please enter an administrator username:': 'splunk'
+      #'Please enter a new password:': 'splunk@123'
+      #'Please confirm new password:': 'splunk@123'
+    timeout: 600
+
+- meta: end play
+
+- name: Add | group | Adding group for Splunk
+  group:
+    name: splunk
+    state: present
+  become: true
+
+- name: Add | User | Adding user for splunk
+  user:
+    name: splunk
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    group: sudo
+    home: /opt/Splunk
+    create_home: yes
+  become: true
+- name: download | splunk indexer | Downloading Splunkindexer in target VM
+  get_url:
+    url: https://download.splunk.com/products/splunk/releases/8.0.0/linux/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb
+    dest: "{{ l_rmp_location_path }}/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb"
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+  become: true
+- name: Install Splunk DEB package
+  command: dpkg --install /opt/splunk/splunk-8.0.0-1357bef0a7f6-linux-2.6-amd64.deb
+  become: true
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+- name: sudo permission
+  blockinfile:
+    path: /etc/sudoers
+    insertafter: 'root  ALL=(ALL)      ALL'
+    block: |
+      splunk   ALL=(ALL)       ALL
+  become: true
+- name: change | ownership | changing file permissions
+  become: true
+  file:
+    path: "{{ l_rmp_location_path }}"
+    owner: root
+    group: root
+    recurse: yes
+    mode: "0777"
+    state: directory
+    #become_user: splunk
+  #  become_flags: ' -H -sH -E -p "{{ ansible_become_pass }}"'
+  environment:
+    http_proxy: http://10.154.248.91:8080
+    https_proxy: http://10.154.248.91:8080
+
+      #'Please enter an administrator username:': 'splunk'
+      #'Please enter a new password:': 'splunk@123'
+      #'Please confirm new password:': 'splunk@123'
+
+- name: start service
+  become: true
+  expect:
+    systemd:
+      name: splunk
+      state: started
+      enabled: yes
+    responses:
+            # (.*)Do you agree with this license? [y/n](.*): y
+            # (.*)Do you agree with this license? [y/n](.*): y
+      (.*)Please enter an administrator username(.*): "splunk"
+      (.*)Please enter a new password(.*): "splunk@123"
+      (.*)Please confirm new password(.*): "splunk@123"

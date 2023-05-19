@@ -1,0 +1,14 @@
+- name: Start Splunk Forwarder
+  hosts: centos1
+  become: true
+  tasks:
+    - name: Run Splunk Start Command
+      expect:
+        command: "/opt/splunkforwarder/bin/splunk enable boot-start -user splunk --answer-yes --accept-license"
+        responses:
+          'Please enter an administrator username:': 'splunk'
+          'Please enter a new password:': 'splunk@123'
+          'Please confirm new password:': 'splunk@123'
+        timeout: 600
+      become: true
+

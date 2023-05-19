@@ -1,0 +1,7 @@
+---
+# tasks file for roles/Indexer
+#- include: prereq.yml
+
+#- include: install.yml
+
+- include: free_licence.yml
